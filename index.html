@@ -49,7 +49,7 @@
     </div>
 
     <!-- PANTALLA 1: AUTENTICACIÓN GITHUB -->
-    <div id="screen-auth" class="flex-1 flex items-center justify-center p-4 bg-gray-900 text-white hidden">
+    <div id="screen-auth" class="flex-1 flex items-center justify-center p-4 bg-gray-900 text-white">
         <div class="bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-8 text-center border border-gray-700">
             <i data-lucide="github" class="w-16 h-16 mx-auto mb-4 text-white"></i>
             <h1 class="text-2xl font-bold mb-2">Conectar con GitHub</h1>
@@ -213,7 +213,14 @@
 
     <!-- Utils y Lógica -->
     <script>
-        lucide.createIcons();
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+
+        // --- UTILIDADES DE MEMORIA SEGURA (Para evitar errores en file://) ---
+        const safeGetLocal = (key) => { try { return localStorage.getItem(key); } catch (e) { return null; } };
+        const safeSetLocal = (key, val) => { try { localStorage.setItem(key, val); } catch (e) { } };
+        const safeRemoveLocal = (key) => { try { localStorage.removeItem(key); } catch (e) { } };
 
         // --- CONSTANTES Y ESTADO GLOBAL ---
         const REPO_PREFIX = 'p2p-workspace-';
@@ -255,15 +262,14 @@
 
         // --- INICIALIZACIÓN ---
         window.onload = () => {
-            const savedToken = localStorage.getItem('gh_token');
-            const savedName = localStorage.getItem('p2p_name');
+            const savedToken = safeGetLocal('gh_token');
+            const savedName = safeGetLocal('p2p_name');
             if (savedName) document.getElementById('auth-name').value = savedName;
 
             if (savedToken) {
                 document.getElementById('auth-token').value = savedToken;
+                document.getElementById('screen-auth').classList.add('hidden');
                 authenticate(savedToken);
-            } else {
-                document.getElementById('screen-auth').classList.remove('hidden');
             }
         };
 
@@ -319,8 +325,8 @@
                 ghUser = await ghApi('/user');
                 myName = name;
 
-                localStorage.setItem('gh_token', token);
-                localStorage.setItem('p2p_name', name);
+                safeSetLocal('gh_token', token);
+                safeSetLocal('p2p_name', name);
 
                 document.getElementById('lobby-user').innerText = ghUser.login;
                 document.getElementById('screen-auth').classList.add('hidden');
@@ -329,6 +335,7 @@
                 await loadRooms();
             } catch (e) {
                 ghToken = '';
+                document.getElementById('screen-auth').classList.remove('hidden');
                 errEl.innerText = "Token inválido o sin permisos."; errEl.classList.remove('hidden');
             } finally {
                 hideLoading();
@@ -336,7 +343,7 @@
         }
 
         function logout() {
-            localStorage.removeItem('gh_token');
+            safeRemoveLocal('gh_token');
             location.reload();
         }
 
